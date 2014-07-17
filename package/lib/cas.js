@@ -77,85 +77,87 @@ var xml2js = require('xml2js');
  *     }
  * @api public
  */
-var CAS = module.exports = function CAS(options) 
-{  
-  options = options || {};
+var CAS = module.exports = function CAS(options)
+{
+    options = options || {};
 
-  if (!options.version) {
-    // Can specify 1.0 or 2.0. Default is 1.0.
-    options.version = 1.0;
-  }
-  this.version = options.version;
+    if (!options.version) {
+        // Can specify 1.0 or 2.0. Default is 1.0.
+        options.version = 1.0;
+    }
+    this.version = options.version;
 
-  if (!options.base_url) {
-    throw new Error('Required CAS option `base_url` missing.');
-  } 
+    if (!options.base_url) {
+        throw new Error('Required CAS option `base_url` missing.');
+    }
 
-  var cas_url = url.parse(options.base_url);
-  if (cas_url.protocol != 'https:') {
-    throw new Error('Only https CAS servers are supported.');
-  } 
-  if (!cas_url.hostname) {
-    throw new Error('Option `base_url` must be a valid url like: https://example.com/cas');
-  } 
-  
-  
-  this.hostname = cas_url.hostname;
-  this.port = cas_url.port || 443;
-  this.base_path = cas_url.pathname;
-  this.service = options.service;
-  this.pgtStore = {};
-  this.pgt_is_external = false;
-  
-  // Optional single sign out server list
-  if (options.sso_servers) {
-    this.ssoServers = options.sso_servers;
-  }
+    var cas_url = url.parse(options.base_url);
+    if (cas_url.protocol != 'https:') {
+        throw new Error('Only https CAS servers are supported.');
+    }
+    if (!cas_url.hostname) {
+        throw new Error('Option `base_url` must be a valid url like: https://example.com/cas');
+    }
 
-  // User has supplied an external PGT callback URL
-  if (options.external_pgt_url) {
-    var pgt_url = url.parse(options.external_pgt_url);
-    if (pgt_url.protocol != 'https:') {
-      throw new Error('Option `external_pgt_url` must be https');
-    }
-    if (!pgt_url.hostname) {
-      throw new Error('Option `external_pgt_url` must be a valid url like: https://example.com:8989/callback');
-    }
-    this.is_pgt_external = true;
-    this.pgt_url = url.format(pgt_url);
-    
-    // A PGT callback URL is only useful if you also have a proxy URL to 
-    // go with it.
-    if (options.external_proxy_url) {
-      var proxy_url = url.parse(options.external_proxy_url);
-      if (!proxy_url.hostname) {
-        throw new Error('Option `external_proxy_url` must be a vald url like: https://example.com:8080/');
-      }
-      this.external_proxy_url = url.format(proxy_url);
-    }
-  }
 
-  // User is requesting the internal proxy server
-  else if (options.proxy_server) {
-    //// Required
-    // (openssl genrsa -out privatekey.pem 1024)
-    this.proxy_server_key = options.proxy_server_key;
-    // (openssl req -new -key privatekey.pem -out csr.pem)
-    // (openssl x509 -req -in csr.pem -signkey privatekey.pem -out cert.pem)
-    this.proxy_server_cert = options.proxy_server_cert;
-    if (!this.proxy_server_key || !this.proxy_server_cert) {
-        throw new Error('Options `proxy_server_key` and `proxy_server_cert` are required because you specified `proxy_server`');
+    this.hostname = cas_url.hostname;
+    this.port = cas_url.port || 443;
+    this.base_path = cas_url.pathname;
+    this.service = options.service;
+    this.pgtStore = {};
+    this.pgt_is_external = false;
+
+    this.trusted_ca = options.trusted_ca;
+
+    // Optional single sign out server list
+    if (options.sso_servers) {
+        this.ssoServers = options.sso_servers;
     }
-    this.proxy_callback_host = options.proxy_callback_host;
-    if (!this.proxy_callback_host) {
-        throw new Error('Option `proxy_callback_host` is required because you specified `proxy_server`');
+
+    // User has supplied an external PGT callback URL
+    if (options.external_pgt_url) {
+        var pgt_url = url.parse(options.external_pgt_url);
+        if (pgt_url.protocol != 'https:') {
+            throw new Error('Option `external_pgt_url` must be https');
+        }
+        if (!pgt_url.hostname) {
+            throw new Error('Option `external_pgt_url` must be a valid url like: https://example.com:8989/callback');
+        }
+        this.is_pgt_external = true;
+        this.pgt_url = url.format(pgt_url);
+
+        // A PGT callback URL is only useful if you also have a proxy URL to
+        // go with it.
+        if (options.external_proxy_url) {
+            var proxy_url = url.parse(options.external_proxy_url);
+            if (!proxy_url.hostname) {
+                throw new Error('Option `external_proxy_url` must be a vald url like: https://example.com:8080/');
+            }
+            this.external_proxy_url = url.format(proxy_url);
+        }
     }
-    //// Optional
-    this.proxy_server_port = options.proxy_server_port || 0;
-    this.proxy_callback_port = options.proxy_callback_port || 80443
-    
-    this.startProxyServer(this.proxy_server_key, this.proxy_server_cert, this.proxy_callback_host, this.proxy_callback_port, this.proxy_server_port);
-  }
+
+    // User is requesting the internal proxy server
+    else if (options.proxy_server) {
+        //// Required
+        // (openssl genrsa -out privatekey.pem 1024)
+        this.proxy_server_key = options.proxy_server_key;
+        // (openssl req -new -key privatekey.pem -out csr.pem)
+        // (openssl x509 -req -in csr.pem -signkey privatekey.pem -out cert.pem)
+        this.proxy_server_cert = options.proxy_server_cert;
+        if (!this.proxy_server_key || !this.proxy_server_cert) {
+            throw new Error('Options `proxy_server_key` and `proxy_server_cert` are required because you specified `proxy_server`');
+        }
+        this.proxy_callback_host = options.proxy_callback_host;
+        if (!this.proxy_callback_host) {
+            throw new Error('Option `proxy_callback_host` is required because you specified `proxy_server`');
+        }
+        //// Optional
+        this.proxy_server_port = options.proxy_server_port || 0;
+        this.proxy_callback_port = options.proxy_callback_port || 80443
+
+        this.startProxyServer(this.proxy_server_key, this.proxy_server_cert, this.proxy_callback_host, this.proxy_callback_port, this.proxy_server_port);
+    }
 
 };
 
@@ -169,7 +171,7 @@ CAS.version = '0.0.4';
 
 
 /**
- * Force CAS authentication on a web page. If users are not yet authenticated, 
+ * Force CAS authentication on a web page. If users are not yet authenticated,
  * they will be redirected to the CAS server to log in there.
  *
  * @param {object} req
@@ -179,7 +181,7 @@ CAS.version = '0.0.4';
  * @param {function} callback
  *      callback(err, status, username, extended)
  * @param {String} service
- *      (optional) The URL of the service/page that is requesting 
+ *      (optional) The URL of the service/page that is requesting
  *      authentication. Default is to extract this automatically from
  *      the `req` object.
  * @api public
@@ -188,7 +190,7 @@ CAS.prototype.authenticate = function(req, res, callback, service)
 {
     var casURL = 'https://' + this.hostname + ':' + this.port + this.base_path;
     var reqURL = url.parse(req.url, true);
-    
+
     // Try to extract the CAS ticket from the URL
     var ticket = reqURL.query['ticket'];
 
@@ -204,7 +206,7 @@ CAS.prototype.authenticate = function(req, res, callback, service)
             query: reqURL.query
         });
     }
-    
+
     // No ticket, so we haven't been sent to the CAS server yet
     if (!ticket) {
         // redirect to CAS server now
@@ -224,7 +226,7 @@ CAS.prototype.authenticate = function(req, res, callback, service)
 
 
 /**
- * Handle a single sign-out request from the CAS server. 
+ * Handle a single sign-out request from the CAS server.
  *
  * In CAS 3.x the server keeps track of all the `ticket` and `service` values
  * associated with each user. Then when the user logs out from one site, the
@@ -232,11 +234,11 @@ CAS.prototype.authenticate = function(req, res, callback, service)
  * a sign-out request containing the original `ticket` used to login.
  *
  * This is optional. But if you do use this, it must come before authenticate().
- * Also, it will only work if the service is accessible on the network by the 
+ * Also, it will only work if the service is accessible on the network by the
  * CAS server.
  *
- * Unlike the other functions in this module, this one will only work 
- * with Express or something else that pre-processes the body of a POST 
+ * Unlike the other functions in this module, this one will only work
+ * with Express or something else that pre-processes the body of a POST
  * request. It is not compatible with basic node.js http req objects.
  *
  * @param {Object} req
@@ -244,7 +246,7 @@ CAS.prototype.authenticate = function(req, res, callback, service)
  * @param {Object} res
  *      HTTP serverResponse.
  * @param {Function} next
-        Normal callback if no logout request was made.
+ Normal callback if no logout request was made.
  * @param {Function} logoutCallback
  *      function(ticket)
  * @api public
@@ -293,8 +295,8 @@ CAS.prototype.handleSingleSignout = function(req, res, next, logoutCallback)
  * @param {String} returnUrl
  *     (optional) The URL that the user will return to after logging out.
  * @param {Boolean} doRedirect
- *     (optional) Set this to TRUE to have the CAS server redirect the user 
- *      automatically. Default is for the CAS server to only provide a 
+ *     (optional) Set this to TRUE to have the CAS server redirect the user
+ *      automatically. Default is for the CAS server to only provide a
  *      hyperlink to be clicked on.
  * @api public
  */
@@ -336,205 +338,143 @@ CAS.prototype.logout = function(req, res, returnUrl, doRedirect)
  * @param {String} service
  *     The URL of the service requesting authentication. Optional if
  *     the `service` option was already specified during initialization.
- * @param {Boolean} renew 
+ * @param {Boolean} renew
  *     (optional) Set this to TRUE to force the CAS server to request
  *     credentials from the user even if they had already done so
  *     recently.
  * @api public
  */
-CAS.prototype.validate = function(ticket, callback, service, renew) 
+CAS.prototype.validate = function(ticket, callback, service, renew)
 {
-  // Use different CAS path depending on version
-  var validate_path;
-  var pgtURL;
-  if (this.version < 2.0) {
-    // CAS 1.0
-    validate_path = 'validate';
-  } else {
-    // CAS 2.0
-    pgtURL = this.pgt_url;
-    if (ticket.indexOf('PT-') == 0) {
-      validate_path = 'proxyValidate';
+    // Use different CAS path depending on version
+    var validate_path;
+    var pgtURL;
+    if (this.version < 2.0) {
+        // CAS 1.0
+        validate_path = 'validate';
     } else {
-      //validate_path = 'serviceValidate';
-      validate_path = 'proxyValidate';
-    }
-  }
-  
-  // Service URL can be specified in the function call, or during
-  // initialization.
-  var service_url = service || this.service;
-  if (!service_url) {
-    throw new Error('Required CAS option `service` missing.');
-  }
-
-  var query = {
-    'ticket': ticket,
-    'service': service_url
-  };
-  if (renew) {
-    query['renew'] = 1;
-  }
-  if (pgtURL) {
-    query['pgtUrl'] = pgtURL;
-  }
-  
-  var queryPath = url.format({
-      pathname: this.base_path+'/'+validate_path,
-      query: query
-    });
-
-  var req = https.get({
-    host: this.hostname,
-    port: this.port,
-    path: queryPath
-  }, function(res) {
-    // Handle server errors
-    res.on('error', function(e) {
-      callback(e);
-    });
-
-    // Read result
-    res.setEncoding('utf8');
-    var response = '';
-    res.on('data', function(chunk) {
-      response += chunk;
-      if (response.length > 1e6) {
-        req.connection.destroy();
-      }
-    });
-
-    res.on('end', function() {
-      // CAS 1.0
-      if (this.version < 2.0) {
-        var sections = response.split('\n');
-        if (sections.length >= 1) {
-          if (sections[0] == 'no') {
-            callback(undefined, false);
-            return;
-          } else if (sections[0] == 'yes' &&  sections.length >= 2) {
-            callback(undefined, true, sections[1]);
-            return;
-          }
+        // CAS 2.0
+        pgtURL = this.pgt_url;
+        if (ticket.indexOf('PT-') == 0) {
+            validate_path = 'proxyValidate';
+        } else {
+            //validate_path = 'serviceValidate';
+            validate_path = 'proxyValidate';
         }
-        // Format was not correct, error
-        callback(new Error('Bad response format.'));
-      } 
-      
-      // CAS 2.0 (XML response, and extended attributes)
-      else {
-        // Use jsdom to parse the XML repsonse.
-        // ( Note:
-        //     It seems jsdom currently does not support XML namespaces.
-        //     And node names here are case insensitive. Hence attribute
-        //     names will also be case insensitive.
-        // )
-//        jsdom.env(response, function(err, window) {
-//            if (err) {
-//                callback(new Error('jsdom could not parse response: ' + response));
-//                return;
-//            }
-//
-//            // Check for auth success
-//            var elemSuccess = window.document.getElementsByTagName('cas:authenticationSuccess')[0];
-//            if (elemSuccess) {
-//                var elemUser = elemSuccess.getElementsByTagName('cas:user')[0];
-//                if (!elemUser) {
-//                    //  This should never happen
-//                    callback(new Error("No username?"), false);
-//                    return;
-//                }
-//
-//                // Got username
-//                var username = elemUser.textContent;
-//
-//                // Look for optional proxy granting ticket
-//                var pgtIOU;
-//                var elemPGT = elemSuccess.getElementsByTagName('cas:proxyGrantingTicket')[0];
-//                if (elemPGT) {
-//                    pgtIOU = elemPGT.textContent;
-//                }
-//
-//                // Look for optional proxies
-//                var proxies = [];
-//                var elemProxies = elemSuccess.getElementsByTagName('cas:proxies');
-//                for (var i=0; i<elemProxies.length; i++) {
-//                    var thisProxy = elemProxies[i].textContent.trim();
-//                    proxies.push(thisProxy);
-//                }
-//
-//                // Look for optional attributes
-//                var attributes = parseAttributes(elemSuccess);
-//
-//                callback(undefined, true, username, {
-//                    'username': username,
-//                    'attributes': attributes,
-//                    'PGTIOU': pgtIOU,
-//                    'ticket': ticket,
-//                    'proxies': proxies
-//                });
-//                return;
-//            } // end if auth success
-//
-//            // Check for correctly formatted auth failure message
-//            var elemFailure = window.document.getElementsByTagName('cas:authenticationFailure')[0];
-//            if (elemFailure) {
-//                var code = elemFailure.getAttribute('code');
-//                var message = 'Validation failed [' + code +']: ';
-//                message += elemFailure.textContent;
-//                callback(new Error(message), false);
-//                return;
-//            }
-//
-//            // The response was not in any expected format, error
-//            callback(new Error('Bad response format.'));
-//            console.error(response);
-//            return;
-//        });
+    }
 
-        var parser = new xml2js.Parser();
-        parser.parseString(response, function(err, result) {
-            if (err) {
-                callback(new Error('xml2js could not parse response: ' + response));
-                return;
-            }
-            var elemSuccess = result['cas:serviceResponse']['cas:authenticationSuccess'];
-            if (elemSuccess) {
-                elemSuccess = elemSuccess[0];
-                var elemUser = elemSuccess['cas:user'];
-                if (!elemUser) {
-                    callback(new Error("No username?"), false);
-                    return;
-                }
-                var username = elemUser[0];
+    // Service URL can be specified in the function call, or during
+    // initialization.
+    var service_url = service || this.service;
+    if (!service_url) {
+        throw new Error('Required CAS option `service` missing.');
+    }
 
-                callback(undefined, true, username, {
-                    'username': username,
-                    'attributes': [],
-                    'PGTIOU': {},
-                    'ticket': ticket,
-                    'proxies': []
-                });
-                return;
-            }
-            var elemFailure = result['cas:serviceResponse']['cas:authenticationFailure'];
-            if (elemFailure) {
-                elemFailure = elemFailure[0];
-                var code = elemFailure['$']['code'];
-                var message = 'Validation failed [' + code +']: ';
-                message += elemFailure['_'];
-                callback(new Error(message), false);
-                return;
-            }
+    var query = {
+        'ticket': ticket,
+        'service': service_url
+    };
+    if (renew) {
+        query['renew'] = 1;
+    }
+    if (pgtURL) {
+        query['pgtUrl'] = pgtURL;
+    }
 
-            // The response was not in any expected format, error
-            callback(new Error('Bad response format.'));
-            console.error(response);
-            return;
-        })
-      };
+    var queryPath = url.format({
+        pathname: this.base_path+'/'+validate_path,
+        query: query
     });
-  });
+
+    var req = https.get({
+        host: this.hostname,
+        port: this.port,
+        ca: this.trusted_ca,
+        path: queryPath
+    }, function(res) {
+        // Handle server errors
+        res.on('error', function(e) {
+            callback(e);
+        });
+
+        // Read result
+        res.setEncoding('utf8');
+        var response = '';
+        res.on('data', function(chunk) {
+            response += chunk;
+            if (response.length > 1e6) {
+                req.connection.destroy();
+            }
+        });
+
+        res.on('end', function() {
+            // CAS 1.0
+            if (this.version < 2.0) {
+                var sections = response.split('\n');
+                if (sections.length >= 1) {
+                    if (sections[0] == 'no') {
+                        callback(undefined, false);
+                        return;
+                    } else if (sections[0] == 'yes' &&  sections.length >= 2) {
+                        callback(undefined, true, sections[1]);
+                        return;
+                    }
+                }
+                // Format was not correct, error
+                callback(new Error('Bad response format.'));
+            }
+
+            // CAS 2.0 (XML response, and extended attributes)
+            else {
+                // Use jsdom to parse the XML repsonse.
+                // ( Note:
+                //     It seems jsdom currently does not support XML namespaces.
+                //     And node names here are case insensitive. Hence attribute
+                //     names will also be case insensitive.
+                // )
+                var parser = new xml2js.Parser();
+                parser.parseString(response, function(err, result) {
+                    if (err) {
+                        callback(new Error('xml2js could not parse response: ' + response));
+                        return;
+                    }
+                    var elemSuccess = result['cas:serviceResponse']['cas:authenticationSuccess'];
+                    if (elemSuccess) {
+                        elemSuccess = elemSuccess[0];
+                        var elemUser = elemSuccess['cas:user'];
+                        if (!elemUser) {
+                            callback(new Error("No username?"), false);
+                            return;
+                        }
+                        var username = elemUser[0];
+
+                        callback(undefined, true, username, {
+                            'username': username,
+                            'attributes': [],
+                            'PGTIOU': elemSuccess['cas:proxyGrantingTicket'],
+                            'ticket': ticket,
+                            'proxies': []
+                        });
+                        return;
+                    }
+                    var elemFailure = result['cas:serviceResponse']['cas:authenticationFailure'];
+                    if (elemFailure) {
+                        elemFailure = elemFailure[0];
+                        var code = elemFailure['$']['code'];
+                        var message = 'Validation failed [' + code +']: ';
+                        message += elemFailure['_'];
+                        callback(new Error(message), false);
+                        return;
+                    }
+
+                    // The response was not in any expected format, error
+                    callback(new Error('Bad response format.'));
+                    console.error(response);
+                    return;
+                })
+            };
+        });
+    });
 };
 
 
@@ -554,7 +494,7 @@ CAS.prototype.validate = function(ticket, callback, service, renew)
 CAS.prototype.getProxyGrantingTicket = function(pgtIOU, callback)
 {
     var pgt = '';
-    
+
     // If configured for external proxy server use, fetch the PT from there
     if (this.is_pgt_external) {
         var urlFetchPGT = url.parse(this.pgt_url + 'getPGT?pgtiou=' + pgtIOU);
@@ -598,10 +538,10 @@ CAS.prototype.getProxyGrantingTicket = function(pgtIOU, callback)
  * @param {function} callback
  *      callback(err, pt)
  */
-CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback) 
+CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
 {
     var self = this;
-    
+
     // Obtain the PGT
     this.getProxyGrantingTicket(pgtIOU, function(err, pgt) {
         if (err) {
@@ -613,9 +553,10 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
             protocol: 'https:',
             hostname: self.hostname,
             port: self.port,
+            ca: self.trusted_ca,
             path: url.format({
                 pathname: self.base_path + '/proxy',
-                query: { 
+                query: {
                     'targetService': targetService,
                     'pgt': pgt
                 }
@@ -625,42 +566,30 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
             res.on('error', function(e) {
                 callback(e);
             });
-            
+
             // Read result
             res.setEncoding('utf8');
             var response = '';
             res.on('data', function(chunk) {
                 response += chunk;
                 if (response.length > 1e6) {
-                    req.connection.destroy();            
+                    req.connection.destroy();
                 }
             });
             res.on('end', function() {
-                // Use jsdom to parse the XML response
-                jsdom.env(response, function(err, window) {
+                var parser = new xml2js.Parser();
+                parser.parseString(response, function(err, result) {
                     if (err) {
-                        callback(new Error("jsdom could not parse response: " + response));
+                        callback(new Error('xml2js could not parse response: ' + response));
                         return;
                     }
-                    // Got the proxy ticket
-                    var elemTicket = window.document.getElementsByTagName('cas:proxyTicket')[0];
-                    if (elemTicket) {
-                        var proxyTicket = elemTicket.textContent;
+                    var elemSuccess = result['cas:serviceResponse']['cas:proxySuccess'];
+                    if (elemSuccess) {
+                        elemSuccess = elemSuccess[0];
+                        var proxyTicket = elemSuccess['cas:proxyTicket'];
                         callback(undefined, proxyTicket);
                         return;
                     }
-                    // Got a proxy failure
-                    var elemFailure = window.document.getElementsByTagName('cas:proxyFailure')[0];
-                    if (elemFailure) {
-                        var code = elemFailure.getAttribute('code');
-                        var message = 'Proxy failure [' + code + ']: ';
-                        message += elemFailure.textContent;
-                        callback(new Error(message));
-                        return;
-                    }
-                    // Unexpected response
-                    callback(new Error("Bad response format: " + response));
-                    return;
                 });
             });
         });
@@ -670,19 +599,19 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
 
 /**
  * Start a local proxy server.
- * 
- * This is a local HTTPS server that listens for incoming connections from 
+ *
+ * This is a local HTTPS server that listens for incoming connections from
  * the CAS server. Any PGTs received from the CAS server will be stored
  * in `this.pgtStore`.
  *
- * This is optionally also a proxy server that listens for outgoing proxy 
- * requests from clients that already have a PGTIOU. In addition to the 
- * normal HTTP information, the client must also supply these two headers 
+ * This is optionally also a proxy server that listens for outgoing proxy
+ * requests from clients that already have a PGTIOU. In addition to the
+ * normal HTTP information, the client must also supply these two headers
  * in the request:
  *    cas-proxy-pgtiou
  *    cas-proxy-targeturl
  *
- * For this to work, the local machine and the CAS server must be able to 
+ * For this to work, the local machine and the CAS server must be able to
  * access each other on the network.
  *
  * @param {String/Buffer} key
@@ -699,24 +628,24 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
  *    internal requests via CAS.proxiedRequest().
  * @api public
  */
-CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort, proxyPort) 
+CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort, proxyPort)
 {
     var serverOptions = {
         'key': key,
         'cert': cert
     };
     var self = this;
-    
+
     // This is the pgtURL that will be sent to the CAS server during a
     // validation request. The CAS server will try to connect to it.
     this.pgt_url = 'https://' + callbackHost + ':' + callbackPort + '/';
-    
+
     // PGT callback server that listens for incoming connections from
     // the CAS server.
     var pgtServer = https.createServer(serverOptions);
     console.log('Starting PGT callback server on port ' + callbackPort);
     pgtServer.addListener("request", function(req, res) {
-        
+
         var reqURL = url.parse(req.url, true);
 
         // Check if this is a request from a CAS _client_ to get a PGT.
@@ -735,7 +664,7 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
             }
             return;
         }
-    
+
         // Otherwise this is a connection from the CAS _server_.
         // The incoming connection tells us what the PGTIOU and PGT values
         // are. It expects only a HTTP 200 response in return.
@@ -755,7 +684,7 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
         }
     });
     pgtServer.listen(callbackPort);
-    
+
     // Start an interval for garbage collection of the local PGT store.
     if (this.pgtInterval) {
         clearInterval(this.pgtInterval);
@@ -770,7 +699,7 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
             }
         }
     }, 1000 * 60);
-    
+
     // Proxy server that listens for HTTPS connections from other CAS clients
     // and forwards them to the target service. Disabled by default.
     if (proxyPort) {
@@ -806,7 +735,7 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
                 res.end();
                 return;
             }
-            
+
             // The headers are okay. Next begin the proxied request.
             targetOptions.method = req.method || 'GET';
             self.proxiedRequest(pgtIOU, targetOptions, function(err, targetReq, targetRes) {
@@ -817,7 +746,7 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
                     res.end();
                     return;
                 }
-            
+
                 // Mirror requester's data to the target
                 req.on('data', function(chunk) {
                     targetReq.write(chunk);
@@ -825,10 +754,10 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
                 req.on('end', function() {
                     targetReq.end();
                 });
-            
+
                 // Mirror target's response headers back to requester
                 res.writeHead(targetRes.statusCode, targetRes.headers);
-            
+
                 // Mirror target's data back to the requester
                 targetRes.on('data', function(chunk) {
                     res.write(chunk);
@@ -845,20 +774,20 @@ CAS.prototype.startProxyServer = function(key, cert, callbackHost, callbackPort,
 
 /**
  * Create a CAS proxied HTTP/HTTPS request.
- * The CAS proxy ticket (PT) will automatically be added to the target 
+ * The CAS proxy ticket (PT) will automatically be added to the target
  * service's query.
  *
  * @param {String} pgtIOU
  *     This should have been obtained during the initial CAS login with
  *     the validate() function.
  * @param {Object} options
- *     Same as the options passed in to http.request(). This is where you 
+ *     Same as the options passed in to http.request(). This is where you
  *     specify the service URL you are requesting.
  * @param {Function} callback
  *     callback(err, req, res)
  * @api public
  */
-CAS.prototype.proxiedRequest = function(pgtIOU, options, callback) 
+CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
 {
     if (this.external_proxy_url) {
         this.proxiedRequestExternal(this.external_proxy_url, pgtIOU, options, callback);
@@ -866,13 +795,13 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
     }
 
     var targetService = url.format(options);
-    
+
     this.getProxyTicket(pgtIOU, targetService, function(err, pt) {
         if (err) {
             callback(err);
             return;
         }
-        
+
         // Add the proxy ticket to the target service's query string
         var path = options.path || targetService.replace(/^https?:\/\/[^\/]+/, '');
         if (path.match(/[&?]/)) {
@@ -885,7 +814,10 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
         delete options.href;
         delete options.query;
         options.agent = false;
-        
+
+        var auth = 'Basic ' + new Buffer(':' + pt).toString('base64');
+        options.headers = {'Authorization': auth};
+
         // Request the target service
         var serviceObj;
         if (options.options == 'https:') {
@@ -903,7 +835,7 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
                         callback(undefined, req, res);
                     });
                     break;
-                    
+
                 case 'POST':
                 case 'PUT':
                     // Let the calling function end the request manually after
@@ -919,7 +851,7 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
         catch (err) {
             callback(err);
         }
-        
+
     });
 }
 
@@ -933,13 +865,13 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
  *     This should have been obtained during the initial CAS login with
  *     the validate() function.
  * @param {Object} requestOptions
- *     Same as the options passed in to http.request(). This is where you 
+ *     Same as the options passed in to http.request(). This is where you
  *     specify the service URL you are requesting.
  * @param {Function} callback
  *     callback(err, req, res)
  * @api public
  */
-CAS.prototype.proxiedRequestExternal = function(proxyURL, pgtIOU, options, callback) 
+CAS.prototype.proxiedRequestExternal = function(proxyURL, pgtIOU, options, callback)
 {
     var targetService = url.format(options);
     var proxyInfo = url.parse(proxyURL);
@@ -959,7 +891,7 @@ CAS.prototype.proxiedRequestExternal = function(proxyURL, pgtIOU, options, callb
     } else {
         serviceObj = http;
     }
-    
+
     try {
         var req = serviceObj.get(proxyInfo, function(res) {
             callback(undefined, req, res);
@@ -984,7 +916,7 @@ CAS.prototype.proxiedRequestExternal = function(proxyURL, pgtIOU, options, callb
  *     }
  * @attribution http://downloads.jasig.org/cas-clients/php/1.2.0/docs/api/client_8php_source.html#l01589
  */
-var parseAttributes = function(elemSuccess) 
+var parseAttributes = function(elemSuccess)
 {
     var attributes = {};
     var elemAttribute = elemSuccess.getElementsByTagName('cas:attributes')[0];
@@ -1018,7 +950,7 @@ var parseAttributes = function(elemSuccess)
             }
         }
     }
-    
+
     else {
         // "RubyCAS Style" attributes
         // 
@@ -1060,7 +992,7 @@ var parseAttributes = function(elemSuccess)
             }
         }
     }
-    
+
     if (attributes == {}) {
         // "Name-Value" attributes.
         // 
@@ -1095,6 +1027,6 @@ var parseAttributes = function(elemSuccess)
             }
         }
     }
-    
+
     return attributes;
 }
