@@ -1,11 +1,17 @@
 {
-  "name": "xcas",
-  "version": "0.1.0",
-  "description": "Extended Central Authentication Service (CAS) client for Node.js",
-  "author": "Xiong Yuanwei <shallweel@gmail.com>",
-  "dependencies": {
-    "xml2js": "*"
-  },
-  "main": "index",
-  "engines": { "node": "0.4 || 0.5 || 0.6" }
+    "name": "fmontmasson-xcas",
+    "version": "0.1.0",
+    "description": "Extended Central Authentication Service (CAS) client for Node.js",
+    "author": "Francois Montmasson <fmontmasson@gmail.com>",
+    "dependencies": {
+        "xml2js": "*"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/fmontmasson/xcas.git"
+    },
+    "main": "index",
+    "engines": {
+        "node": "0.4 || 0.5 || 0.6"
+    }
 }
