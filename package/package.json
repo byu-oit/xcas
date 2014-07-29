@@ -1,6 +1,6 @@
 {
     "name": "fmontmasson-xcas",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Extended Central Authentication Service (CAS) client for Node.js",
     "author": "Francois Montmasson <fmontmasson@gmail.com>",
     "dependencies": {

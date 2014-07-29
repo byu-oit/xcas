@@ -453,7 +453,16 @@ CAS.prototype.validate = function(ticket, callback, service, renew)
                         callback(new Error('xml2js could not parse response: ' + response));
                         return;
                     }
-                    var elemSuccess = result['cas:serviceResponse']['cas:authenticationSuccess'];
+                    if (!result) {
+                        callback(new Error('xml2js could not parse response: ' + response));
+                        return;
+                    }
+                    var parentResponse = result['cas:serviceResponse'];
+                    if (!parentResponse) {
+                        callback(new Error('xml2js could not parse response: ' + response));
+                        return;
+                    }
+                    var elemSuccess = parentResponse['cas:authenticationSuccess'];
                     if (elemSuccess) {
                         elemSuccess = elemSuccess[0];
                         var elemUser = elemSuccess['cas:user'];
@@ -472,7 +481,7 @@ CAS.prototype.validate = function(ticket, callback, service, renew)
                         });
                         return;
                     }
-                    var elemFailure = result['cas:serviceResponse']['cas:authenticationFailure'];
+                    var elemFailure = parentResponse['cas:authenticationFailure'];
                     if (elemFailure) {
                         elemFailure = elemFailure[0];
                         var code = elemFailure['$']['code'];
