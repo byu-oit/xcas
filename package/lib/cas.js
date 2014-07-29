@@ -23,10 +23,12 @@ var xml2js = require('xml2js');
  * Initialize CAS with the given `options`.
  *
  * @param {Object} options
- *     { 
- *       'base_url': 
- *           The full URL to the CAS server, including the base path.
- *       'service': 
+ *     {
+ *       'base_url':
+ *           The full internal URL to the CAS server, including the base path.
+ *       'external_url':
+ *           (optional) The full external URL to the CAS server, including the base path.
+ *       'service':
  *           The URL of the current page. Optional with authenticate().
  *       'version': 
  *           Either 1.0 or 2.0
@@ -103,9 +105,23 @@ var CAS = module.exports = function CAS(options)
     this.hostname = cas_url.hostname;
     this.port = cas_url.port || 443;
     this.base_path = cas_url.pathname;
+
+    if (options.external_url) {
+        var cas_external_url = url.parse(options.external_url);
+        if (cas_external_url.protocol != 'https:') {
+            throw new Error('Only https CAS external servers are supported.');
+        }
+        if (!cas_external_url.hostname) {
+            throw new Error('Option `external_url` must be a valid url like: https://example.com/cas');
+        }
+
+        this.external_url = options.external_url;
+    } else {
+        this.external_url = options.base_url;
+    }
+
     this.service = options.service;
     this.pgtStore = {};
-    this.pgt_is_external = false;
 
     this.trusted_ca = options.trusted_ca;
 
@@ -188,7 +204,6 @@ CAS.version = '0.0.4';
  */
 CAS.prototype.authenticate = function(req, res, callback, service)
 {
-    var casURL = 'https://' + this.hostname + ':' + this.port + this.base_path;
     var reqURL = url.parse(req.url, true);
 
     // Try to extract the CAS ticket from the URL
@@ -210,7 +225,7 @@ CAS.prototype.authenticate = function(req, res, callback, service)
     // No ticket, so we haven't been sent to the CAS server yet
     if (!ticket) {
         // redirect to CAS server now
-        var redirectURL = casURL + '/login?service=' + encodeURIComponent(service);
+        var redirectURL = this.external_url + '/login?service=' + encodeURIComponent(service);
         res.writeHead(307, {'Location': redirectURL});
         res.write('<a href="' + redirectURL + '">CAS login</a>');
         res.end();
