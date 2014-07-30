@@ -147,9 +147,14 @@ var CAS = module.exports = function CAS(options)
         if (options.external_proxy_url) {
             var proxy_url = url.parse(options.external_proxy_url);
             if (!proxy_url.hostname) {
-                throw new Error('Option `external_proxy_url` must be a vald url like: https://example.com:8080/');
+                throw new Error('Option `external_proxy_url` must be a valid url like: https://example.com:8080/');
             }
             this.external_proxy_url = url.format(proxy_url);
+        }
+
+        this.proxy_server_cert = options.proxy_server_cert;
+        if (!this.proxy_server_cert) {
+            throw new Error('Option `proxy_server_cert` is required because you specified `external_pgt_url`');
         }
     }
 
@@ -182,7 +187,7 @@ var CAS = module.exports = function CAS(options)
  * Library version.
  */
 
-CAS.version = '0.1.3';
+CAS.version = '0.1.4';
 
 
 
@@ -448,6 +453,10 @@ CAS.prototype.validate = function(ticket, callback, service, renew)
                 //     names will also be case insensitive.
                 // )
                 var parser = new xml2js.Parser();
+                 if (!response) {
+                    callback(new Error('response is empty'));
+                    return;
+                }
                 parser.parseString(response, function(err, result) {
                     if (err) {
                         callback(new Error('xml2js could not parse response: ' + response));
@@ -522,6 +531,7 @@ CAS.prototype.getProxyGrantingTicket = function(pgtIOU, callback)
     // If configured for external proxy server use, fetch the PT from there
     if (this.is_pgt_external) {
         var urlFetchPGT = url.parse(this.pgt_url + 'getPGT?pgtiou=' + pgtIOU);
+        urlFetchPGT['ca'] = this.proxy_server_cert;
         https.get(urlFetchPGT, function(res) {
             res.on('data', function(chunk) {
                 pgt += chunk;
@@ -579,7 +589,7 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
             port: self.port,
             ca: self.trusted_ca,
             path: url.format({
-                pathname: self.base_path + '/proxy',
+                pathname: self.base_path + 'proxy',
                 query: {
                     'targetService': targetService,
                     'pgt': pgt
@@ -602,12 +612,25 @@ CAS.prototype.getProxyTicket = function(pgtIOU, targetService, callback)
             });
             res.on('end', function() {
                 var parser = new xml2js.Parser();
-                parser.parseString(response, function(err, result) {
+                 if (!response) {
+                    callback(new Error('response is empty'));
+                    return;
+                }
+               parser.parseString(response, function(err, result) {
                     if (err) {
                         callback(new Error('xml2js could not parse response: ' + response));
                         return;
                     }
-                    var elemSuccess = result['cas:serviceResponse']['cas:proxySuccess'];
+                    if (!result) {
+                        callback(new Error('xml2js could not parse response: ' + response));
+                        return;
+                    }
+                    var parentResponse = result['cas:serviceResponse'];
+                    if (!parentResponse) {
+                        callback(new Error('xml2js could not parse response: ' + response));
+                        return;
+                    }
+                    var elemSuccess = parentResponse['cas:proxySuccess'];
                     if (elemSuccess) {
                         elemSuccess = elemSuccess[0];
                         var proxyTicket = elemSuccess['cas:proxyTicket'];
