@@ -182,7 +182,7 @@ var CAS = module.exports = function CAS(options)
  * Library version.
  */
 
-CAS.version = '0.0.4';
+CAS.version = '0.1.3';
 
 
 
@@ -397,7 +397,7 @@ CAS.prototype.validate = function(ticket, callback, service, renew)
     }
 
     var queryPath = url.format({
-        pathname: this.base_path+'/'+validate_path,
+        pathname: this.base_path+validate_path,
         query: query
     });
 
