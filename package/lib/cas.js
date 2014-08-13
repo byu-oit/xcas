@@ -187,7 +187,7 @@ var CAS = module.exports = function CAS(options)
  * Library version.
  */
 
-CAS.version = '0.1.4';
+CAS.version = '0.1.5';
 
 
 
@@ -842,8 +842,9 @@ CAS.prototype.proxiedRequest = function(pgtIOU, options, callback)
     }
 
     var targetService = url.format(options);
+    var service = options.protocol + '//' + options.hostname + ':' + options.port + '/';
 
-    this.getProxyTicket(pgtIOU, targetService, function(err, pt) {
+    this.getProxyTicket(pgtIOU, service, function(err, pt) {
         if (err) {
             callback(err);
             return;
