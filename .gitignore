@@ -1,3 +1,5 @@
+.git
+
 # Logs
 logs
 *.log
@@ -63,6 +65,3 @@ typings/
 #vim
 *.swp
 
-#generated files
-www/assets
-www/bundle.js
