@@ -1,14 +1,14 @@
 {
-    "name": "xcas",
-    "version": "0.1.5",
+    "name": "@byu-oit/xcas",
+    "version": "1.0.0",
     "description": "Extended Central Authentication Service (CAS) client for Node.js",
     "author": "Francois Montmasson <fmontmasson@gmail.com>",
     "dependencies": {
-        "xml2js": "~0.4.4"
+        "xml2js": "^0.4.19"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/fmontmasson/xcas.git"
+        "url": "https://github.com/byu-oit/xcas.git"
     },
     "main": "index"
 }
