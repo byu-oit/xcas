@@ -1,17 +1,14 @@
 {
-    "name": "fmontmasson-xcas",
+    "name": "xcas",
     "version": "0.1.5",
     "description": "Extended Central Authentication Service (CAS) client for Node.js",
     "author": "Francois Montmasson <fmontmasson@gmail.com>",
     "dependencies": {
-        "xml2js": "*"
+        "xml2js": "~0.4.4"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/fmontmasson/xcas.git"
     },
-    "main": "index",
-    "engines": {
-        "node": "0.4 || 0.5 || 0.6"
-    }
+    "main": "index"
 }
